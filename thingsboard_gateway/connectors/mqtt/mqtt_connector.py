@@ -131,6 +131,10 @@ class MqttConnector(Connector, Thread):
         self.daemon = True
 
     def load_handlers(self, handler_flavor, mandatory_keys, accepted_handlers_list):
+        """
+        加载MQTT的各部分配置， 并检查各部分的必要KEY，
+        返回handler配置
+        """
         if handler_flavor not in self.config:
             self.__log.error("'%s' section missing from configuration", handler_flavor)
         else:
@@ -211,6 +215,12 @@ class MqttConnector(Connector, Thread):
         return self.name
 
     def __subscribe(self, topic, qos):
+        """
+        服务启动时订阅各主题
+        :param topic:
+        :param qos:
+        :return:
+        """
         message = self._client.subscribe(topic, qos)
         try:
             self.__subscribes_sent[message[1]] = topic
@@ -218,14 +228,17 @@ class MqttConnector(Connector, Thread):
             self.__log.exception(e)
 
     def _on_connect(self, client, userdata, flags, result_code, *extra_params):
-
+        """"
+       系统启动时会调用_on_connect方法进行与MQTT的连接,
+       实现gateway对指定的topic的订阅
+        """
         result_codes = {
             1: "incorrect protocol version",
             2: "invalid client identifier",
             3: "server unavailable",
             4: "bad username or password",
             5: "not authorised",
-            }
+        }
 
         if result_code == 0:
             self._connected = True
@@ -313,6 +326,9 @@ class MqttConnector(Connector, Thread):
         self.__log.debug(args)
 
     def _on_subscribe(self, _, __, mid, granted_qos, *args):
+        """
+        paho.mqtt client 端订阅
+        """
         log.info(args)
         try:
             if granted_qos[0] == 128:
@@ -330,6 +346,9 @@ class MqttConnector(Connector, Thread):
             self.__log.exception(e)
 
     def _on_message(self, client, userdata, message):
+        """
+        接收客户端发送过来的消息
+        """
         self.statistics['MessagesReceived'] += 1
         content = TBUtility.decode(message)
 
