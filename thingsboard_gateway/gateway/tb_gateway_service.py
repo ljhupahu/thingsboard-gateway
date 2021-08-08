@@ -61,6 +61,7 @@ class TBGatewayService:
         if config_file is None:
             config_file = path.dirname(path.dirname(path.abspath(__file__))) + '/config/tb_gateway.yaml'.replace('/', path.sep)
         with open(config_file) as general_config:
+            # 读取TB Configuration
             self.__config = safe_load(general_config)
         self._config_dir = path.dirname(path.abspath(config_file)) + path.sep
         logging_error = None
@@ -76,6 +77,7 @@ class TBGatewayService:
         self.__updates_check_time = 0
         self.version = self.__updater.get_version()
         log.info("ThingsBoard IoT gateway version: %s", self.version["current_version"])
+        # 可用的connector
         self.available_connectors = {}
         self.__connector_incoming_messages = {}
         self.__connected_devices = {}
@@ -87,6 +89,7 @@ class TBGatewayService:
         self.__connected_devices_file = "connected_devices.json"
         self.tb_client = TBClient(self.__config["thingsboard"], self._config_dir)
         self.tb_client.connect()
+        # 设置RPC 及 attribute的回调方法
         self.subscribe_to_required_topics()
         self.__subscribed_to_rpc_topics = True
         if logging_error is not None:
@@ -104,6 +107,7 @@ class TBGatewayService:
             "memory": MemoryEventStorage,
             "file": FileEventStorage,
         }
+        # 在执行rpc命令时的返回function
         self.__gateway_rpc_methods = {
             "ping": self.__rpc_ping,
             "stats": self.__form_statistics,
@@ -125,6 +129,7 @@ class TBGatewayService:
         self.connectors_configs = {}
         self.__remote_configurator = None
         self.__request_config_after_connect = False
+        # 加载远程TB 服务配置
         self.__init_remote_configuration()
         self._load_connectors()
         self._connect_with_connectors()
@@ -226,6 +231,11 @@ class TBGatewayService:
         self.tb_client.stop()
 
     def __init_remote_configuration(self, force=False):
+        '''
+        如果remoteConfiguration配置为true， 则加载TB中gateway device的客户及共享属性key-value
+        :param force:
+        :return:
+        '''
         if (self.__config["thingsboard"].get("remoteConfiguration") or force) and self.__remote_configurator is None:
             try:
                 self.__remote_configurator = RemoteConfigurator(self, self.__config)
@@ -237,6 +247,12 @@ class TBGatewayService:
             self.__remote_configurator.send_current_configuration()
 
     def _attributes_parse(self, content, *args):
+        '''
+        对gateway在TB的客户端及共享属性配置进行解析
+        :param content:
+        :param args:
+        :return:
+        '''
         try:
             log.debug("Received data: %s", content)
             if content is not None:
